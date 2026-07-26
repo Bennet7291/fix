@@ -1,0 +1,56 @@
+name: Pack Fcitx5 Offline
+
+on:
+  workflow_dispatch:
+
+jobs:
+  pack:
+    name: Build Fcitx5 offline package
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Prepare
+        run: |
+          set -e
+          test "$(dpkg --print-architecture)" = "amd64"
+          sudo apt update
+          sudo apt install -y zip
+          mkdir -p fcitx5-rime/deb
+
+      - name: Download packages
+        run: |
+          set -e
+          sudo apt-get \
+            -o Dir::Cache::archives="$GITHUB_WORKSPACE/fcitx5-rime/deb" \
+            --download-only \
+            --no-install-recommends \
+            install \
+            fcitx5 \
+            fcitx5-rime \
+            fcitx5-frontend-gtk4 \
+            librime1 \
+            librime-data
+
+      - name: Generate files
+        run: |
+          set -e
+          cat > fcitx5-rime/install.sh <<'EOF'
+          #!/bin/bash
+          sudo apt install -y "$(dirname "$0")"/deb/*.deb
+          EOF
+          chmod +x fcitx5-rime/install.sh
+          {
+            echo "Package: Fcitx5" 
+            echo
+            find fcitx5-rime/deb -name "*.deb" -printf "%f\n"
+          } > fcitx5-rime/manifest.txt
+
+      - name: Pack
+        run: zip -r fcitx5-rime.zip fcitx5-rime
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: fcitx5
+          path: fcitx5-rime.zip
+          retention-days: 15
