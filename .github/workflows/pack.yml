@@ -7,7 +7,6 @@ jobs:
   pack:
     name: Build Fcitx5 offline package
     runs-on: ubuntu-24.04
-
     steps:
       - name: Prepare
         run: |
@@ -17,32 +16,31 @@ jobs:
           sudo apt install -y zip
           mkdir -p fcitx5-rime/deb
 
-      - name: Download packages
+      - name: Download packages and dependencies
         run: |
           set -e
-          sudo apt-get \
-            -o Dir::Cache::archives="$GITHUB_WORKSPACE/fcitx5-rime/deb" \
-            --download-only \
-            --no-install-recommends \
-            install \
-            fcitx5 \
-            fcitx5-rime \
-            fcitx5-frontend-gtk4 \
-            librime1 \
-            librime-data
+          PACKAGES="fcitx5 fcitx5-rime fcitx5-frontend-gtk4 librime1 librime-data"
+          DEPS=$(apt-cache depends --recurse --no-recommends --no-suggests \
+                  --no-conflicts --no-breaks --no-replaces --no-enhances \
+                  $PACKAGES | grep "^\w" | sort -u)
+
+          sudo apt-get download $DEPS
+
+          mv *.deb fcitx5-rime/deb/
 
       - name: Generate files
         run: |
           set -e
           cat > fcitx5-rime/install.sh <<'EOF'
           #!/bin/bash
-          sudo apt install -y "$(dirname "$0")"/deb/*.deb
+          sudo dpkg -i "$(dirname "$0")"/deb/*.deb || sudo apt-get install -f -y
           EOF
           chmod +x fcitx5-rime/install.sh
+
           {
-            echo "Package: Fcitx5" 
+            echo "Package: Fcitx5"
             echo
-            find fcitx5-rime/deb -name "*.deb" -printf "%f\n"
+            find fcitx5-rime/deb -type f -name "*.deb" -printf "%f\n"
           } > fcitx5-rime/manifest.txt
 
       - name: Pack
