@@ -16,16 +16,26 @@ jobs:
           sudo apt install -y zip
           mkdir -p fcitx5-rime/deb
 
-      - name: Download packages and dependencies
+      - name: Download Fcitx5 Pinyin for elementary OS 8.1
         run: |
           set -e
-          PACKAGES="fcitx5 fcitx5-rime fcitx5-frontend-gtk4 librime1 librime-data"
-          DEPS=$(apt-cache depends --recurse --no-recommends --no-suggests \
-                  --no-conflicts --no-breaks --no-replaces --no-enhances \
-                  $PACKAGES | grep "^\w" | sort -u)
+          TARGET_PKGS="fcitx5 fcitx5-pinyin fcitx5-frontend-gtk4"
 
-          sudo apt-get download $DEPS
+          DEPS=$(apt-cache depends --recurse \
+                  --no-recommends \
+                  --no-suggests \
+                  --no-conflicts \
+                  --no-breaks \
+                  --no-replaces \
+                  --no-enhances \
+                  $TARGET_PKGS \
+                  | grep "Depends:" \
+                  | awk '{print $2}' \
+                  | grep -vE '^(<.*>|hunspell|aspell|myspell|i[a-z]+-|.*qt.*|.*rime.*)' \
+                  | sort -u)
 
+          ALL_PKGS="$TARGET_PKGS $DEPS"
+          sudo apt-get download $ALL_PKGS
           mv *.deb fcitx5-rime/deb/
 
       - name: Generate files
