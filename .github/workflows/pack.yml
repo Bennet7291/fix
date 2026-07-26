@@ -14,51 +14,53 @@ jobs:
           test "$(dpkg --print-architecture)" = "amd64"
           sudo apt update
           sudo apt install -y zip
-          mkdir -p fcitx5-rime/deb
+          mkdir -p fcitx5-pinyin-eos/deb
 
-      - name: Download Fcitx5 Pinyin for elementary OS 8.1
+      - name: Download Pure Fcitx5 Pinyin Packages
         run: |
           set -e
-          TARGET_PKGS="fcitx5 fcitx5-pinyin fcitx5-frontend-gtk4"
+          PKGS=(
+            fcitx5
+            fcitx5-data
+            fcitx5-modules
+            fcitx5-pinyin
+            fcitx5-chinese-addons-data
+            fcitx5-frontend-gtk4
+            libfcitx5core7
+            libfcitx5config6
+            libfcitx5utils2
+            libfcitx5gclient2
+            libimecore0
+            libimepinyin0
+            libime-data
+            libime-data-language-model
+            libxcb-imdkit1
+          )
 
-          DEPS=$(apt-cache depends --recurse \
-                  --no-recommends \
-                  --no-suggests \
-                  --no-conflicts \
-                  --no-breaks \
-                  --no-replaces \
-                  --no-enhances \
-                  $TARGET_PKGS \
-                  | grep "Depends:" \
-                  | awk '{print $2}' \
-                  | grep -vE '^(<.*>|hunspell|aspell|myspell|i[a-z]+-|.*qt.*|.*rime.*)' \
-                  | sort -u)
-
-          ALL_PKGS="$TARGET_PKGS $DEPS"
-          sudo apt-get download $ALL_PKGS
-          mv *.deb fcitx5-rime/deb/
+          sudo apt-get download "${PKGS[@]}"
+          mv *.deb fcitx5-pinyin-eos/deb/
 
       - name: Generate files
         run: |
           set -e
-          cat > fcitx5-rime/install.sh <<'EOF'
+          cat > fcitx5-pinyin-eos/install.sh <<'EOF'
           #!/bin/bash
           sudo dpkg -i "$(dirname "$0")"/deb/*.deb || sudo apt-get install -f -y
           EOF
-          chmod +x fcitx5-rime/install.sh
+          chmod +x fcitx5-pinyin-eos/install.sh
 
           {
-            echo "Package: Fcitx5"
+            echo "Package: Fcitx5 Pinyin for elementary OS 8.1"
             echo
-            find fcitx5-rime/deb -type f -name "*.deb" -printf "%f\n"
-          } > fcitx5-rime/manifest.txt
+            find fcitx5-pinyin-eos/deb -type f -name "*.deb" -printf "%f\n"
+          } > fcitx5-pinyin-eos/manifest.txt
 
       - name: Pack
-        run: zip -r fcitx5-rime.zip fcitx5-rime
+        run: zip -r fcitx5-pinyin-eos.zip fcitx5-pinyin-eos
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: fcitx5
-          path: fcitx5-rime.zip
+          name: fcitx5-pinyin-eos
+          path: fcitx5-pinyin-eos.zip
           retention-days: 15
